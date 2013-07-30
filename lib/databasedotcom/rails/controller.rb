@@ -4,12 +4,19 @@ module Databasedotcom
       module ClassMethods
         def dbdc_client
           unless @dbdc_client
-            config = YAML.load_file(File.join(::Rails.root, 'config', 'databasedotcom.yml'))
-            config = config.has_key?(::Rails.env) ? config[::Rails.env] : config
-            username = config["username"]
-            password = config["password"]
-            @dbdc_client = Databasedotcom::Client.new(config)
-            @dbdc_client.authenticate(:username => username, :password => password)
+            config = {}
+            if File.exists?(File.join(::Rails.root, 'config', 'databasedotcom.yml'))
+              config = YAML.load_file(File.join(::Rails.root, 'config', 'databasedotcom.yml'))
+              config = config.has_key?(::Rails.env) ? config[::Rails.env] : config
+            end
+            if  (!ENV['DATABASEDOTCOM_USERNAME'].nil? && !ENV['DATABASEDOTCOM_PASSWORD'].nil?) || (!config["username"].nil? && !config["password"].nil?)
+              username = ENV['DATABASEDOTCOM_USERNAME'] || config["username"]
+              password = ENV['DATABASEDOTCOM_PASSWORD'] || config["password"]
+              @dbdc_client = Databasedotcom::Client.new(config)
+              @dbdc_client.authenticate(:username => username, :password => password)
+            else
+              raise "No config file or env vars found."
+            end
           end
 
           @dbdc_client

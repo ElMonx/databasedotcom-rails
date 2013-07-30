@@ -18,6 +18,41 @@ describe Databasedotcom::Rails::Controller do
       TestController.dbdc_client = nil
     end
 
+    describe "if no config file or env vars are found" do
+      before (:each) do
+        File.should_receive(:exists?).and_return(false)
+        ENV.stub(:[]).with("DATABASEDOTCOM_USERNAME").and_return(nil)
+        ENV.stub(:[]).with("DATABASEDOTCOM_PASSWORD").and_return(nil)
+        ENV.stub(:[]).with('DATABASE_COM_URL').and_return(nil)
+      end
+
+      it "should rise an exception" do
+        expect{TestController.dbdc_client}.to raise_error("No config file or env vars found.")
+      end
+    end
+
+    describe "if envrionment variables exist" do
+      before :each do
+        ENV.stub(:[]).with("DATABASEDOTCOM_CLIENT_ID").and_return("client_id")
+        ENV.stub(:[]).with("DATABASEDOTCOM_CLIENT_SECRET").and_return("client_secret")
+        ENV.stub(:[]).with("DATABASEDOTCOM_USERNAME").and_return("username_from_env")
+        ENV.stub(:[]).with("DATABASEDOTCOM_PASSWORD").and_return("password_from_env")
+        ENV.stub(:[]).with("DATABASEDOTCOM_HOST").and_return("host.salesforce.com")
+        ENV.stub(:[]).with("DATABASEDOTCOM_DEBUGGING").and_return("debugging")
+        ENV.stub(:[]).with("DATABASEDOTCOM_VERSION").and_return("version")
+        ENV.stub(:[]).with("DATABASEDOTCOM_SOBJECT_MODULE").and_return("sobject_module")
+        ENV.stub(:[]).with("DATABASEDOTCOM_CA_FILE").and_return("ca_file")
+        ENV.stub(:[]).with("DATABASEDOTCOM_VERIFY_MODE").and_return("verify_mode")
+        ENV.stub(:[]).with('DATABASE_COM_URL').and_return(nil)
+        File.should_receive(:exists?).and_return(false)
+      end
+
+      it "should use them" do
+        Databasedotcom::Client.any_instance.should_receive(:authenticate).with(:username => "username_from_env", :password => "password_from_env")
+        TestController.dbdc_client
+      end
+    end
+
     describe "if the config has an entry that matches Rails.env" do
 #      [:production, :development, :test].each do |env|
         before (:each) do
@@ -26,6 +61,7 @@ describe Databasedotcom::Rails::Controller do
                           :test => { "client_id" => "test_client_id", "client_secret" => "test_client_secret",  "username" => "test_foo", "password" => "test_bar" }
                         }
           YAML.should_receive(:load_file).and_return(config_hash)
+          File.should_receive(:exists?).and_return(true)
           ::Rails.stub!(:env).and_return(:production)
         end
         it "should use the corresponding entry" do
@@ -39,6 +75,7 @@ describe Databasedotcom::Rails::Controller do
         conf_hash = { "client_id" => "client_id", "client_secret" => "client_secret",  "username" => "foo", "password" => "bar" }
         ::Rails.stub!(:env).and_return(:production)
         YAML.should_receive(:load_file).and_return(conf_hash)
+        File.should_receive(:exists?).and_return(true)
         Databasedotcom::Client.any_instance.should_receive(:authenticate).with(:username => "foo", :password => "bar")
         TestController.dbdc_client
       end
@@ -48,6 +85,7 @@ describe Databasedotcom::Rails::Controller do
       before(:each) do
         config_hash = { "client_id" => "client_id", "client_secret" => "client_secret",  "username" => "foo", "password" => "bar" }
         YAML.should_receive(:load_file).and_return(config_hash)
+        File.should_receive(:exists?).and_return(true)
         ::Rails.stub!(:env).and_return(:test)
       end
 
