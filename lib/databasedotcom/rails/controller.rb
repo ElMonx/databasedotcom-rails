@@ -35,10 +35,14 @@ module Databasedotcom
         end
 
         def const_missing(sym)
+          super
+        rescue NoMethodError => e
+          raise
+        rescue NameError => e
           if sobject_types.include?(sym.to_s)
             dbdc_client.materialize(sym.to_s)
           else
-            super
+            raise
           end
         end
       end
